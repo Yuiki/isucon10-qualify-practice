@@ -55,6 +55,8 @@ app.use((req, res, next) => {
 });
 
 app.post("/initialize", async (req, res, next) => {
+  cachedEstates = undefined;
+  cachedChairs = undefined;
   try {
     const dbdir = path.resolve("..", "mysql", "db");
     const dbfiles = [
