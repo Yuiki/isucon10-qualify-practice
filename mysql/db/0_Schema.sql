@@ -45,5 +45,6 @@ CREATE TABLE isuumo.chair
     INDEX idx_pri_sto (`price`, `stock`),
     INDEX idx_r_popularity (`r_popularity`),
     INDEX idx_kin_sto (`kind`, `stock`),
-    INDEX idx_col_sto (`color`, `stock`)
+    INDEX idx_col_sto (`color`, `stock`),
+    INDEX idx_hei_sto (`height`, `stock`)
 );
