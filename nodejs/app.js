@@ -1,7 +1,6 @@
 "use strict";
 
 const express = require("express");
-const morgan = require("morgan");
 const multer = require("multer");
 const mysql = require("mysql");
 const path = require("path");
@@ -32,7 +31,6 @@ const app = express();
 const db = mysql.createPool(dbinfo);
 app.set("db", db);
 
-app.use(morgan("combined"));
 app.use(express.json());
 
 app.use((req, res, next) => {
