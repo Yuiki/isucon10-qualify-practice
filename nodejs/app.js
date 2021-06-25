@@ -25,7 +25,7 @@ const dbinfo = {
   connectionLimit: 10,
 };
 
-const app = fastify({ logger: true });
+const app = fastify({ logger: { level: "debug" } });
 
 app.register(require("fastify-multipart"));
 
@@ -50,6 +50,21 @@ app.addHook("onRequest", (req, res, done) => {
   } else {
     done();
   }
+});
+
+app.addHook("onRequest", (req, res, done) => {
+  if (req.headers["content-length"] === "0") {
+    req.headers["content-type"] = "empty";
+  }
+  done();
+});
+
+app.addContentTypeParser("empty", function (req, done) {
+  let data = "";
+  req.on("data", (chunk) => (data += chunk));
+  req.on("end", () => {
+    done(data);
+  });
 });
 
 app.post("/initialize", async (req, res) => {
