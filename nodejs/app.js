@@ -25,7 +25,7 @@ const dbinfo = {
   connectionLimit: 10,
 };
 
-const app = fastify();
+const app = fastify({ logger: true });
 
 app.register(require("fastify-multipart"));
 
@@ -68,17 +68,19 @@ app.post("/initialize", async (req, res) => {
         `mysql -h ${dbinfo.host} -u ${dbinfo.user} -p${dbinfo.password} -P ${dbinfo.port} ${dbinfo.database} < ${execfile}`
       );
     }
-    res.json({
+    res.send({
       language: "nodejs",
     });
-  } catch (e) {}
+  } catch (e) {
+    console.log(e);
+  }
 });
 
 let cachedEstates;
 
 app.get("/api/estate/low_priced", async (req, res) => {
   if (cachedEstates) {
-    res.json({ estates: cachedEstates });
+    res.send({ estates: cachedEstates });
     return;
   }
   const getConnection = promisify(db.getConnection.bind(db));
@@ -90,7 +92,7 @@ app.get("/api/estate/low_priced", async (req, res) => {
       [LIMIT]
     );
     cachedEstates = es.map((estate) => camelcaseKeys(estate));
-    res.json({ estates: cachedEstates });
+    res.send({ estates: cachedEstates });
   } catch (e) {
   } finally {
     await connection.release();
@@ -101,7 +103,7 @@ let cachedChairs;
 
 app.get("/api/chair/low_priced", async (req, res) => {
   if (cachedChairs) {
-    res.json({ chairs: cachedChairs });
+    res.send({ chairs: cachedChairs });
     return;
   }
   const getConnection = promisify(db.getConnection.bind(db));
@@ -113,7 +115,7 @@ app.get("/api/chair/low_priced", async (req, res) => {
       [LIMIT]
     );
     cachedChairs = cs.map((chair) => camelcaseKeys(chair));
-    res.json({ chairs: cachedChairs });
+    res.send({ chairs: cachedChairs });
   } catch (e) {
   } finally {
     await connection.release();
@@ -264,7 +266,7 @@ app.get("/api/chair/search", async (req, res) => {
       `${sqlprefix}${searchCondition}${limitOffset}`,
       queryParams
     );
-    res.json({
+    res.send({
       count,
       chairs: camelcaseKeys(chairs),
     });
@@ -275,7 +277,7 @@ app.get("/api/chair/search", async (req, res) => {
 });
 
 app.get("/api/chair/search/condition", (req, res) => {
-  res.json(chairSearchCondition);
+  res.send(chairSearchCondition);
 });
 
 app.get("/api/chair/:id", async (req, res) => {
@@ -289,7 +291,7 @@ app.get("/api/chair/:id", async (req, res) => {
       res.status(404).send("Not Found");
       return;
     }
-    res.json(camelcaseKeys(chair));
+    res.send(camelcaseKeys(chair));
   } catch (e) {
   } finally {
     await connection.release();
@@ -325,7 +327,7 @@ app.post("/api/chair/buy/:id", async (req, res) => {
       id,
     ]);
     await commit();
-    res.json({ ok: true });
+    res.send({ ok: true });
   } catch (e) {
     await rollback();
   } finally {
@@ -446,7 +448,7 @@ app.get("/api/estate/search", async (req, res) => {
       `${sqlprefix}${searchCondition}${limitOffset}`,
       queryParams
     );
-    res.json({
+    res.send({
       count,
       estates: camelcaseKeys(estates),
     });
@@ -457,7 +459,7 @@ app.get("/api/estate/search", async (req, res) => {
 });
 
 app.get("/api/estate/search/condition", (req, res) => {
-  res.json(estateSearchCondition);
+  res.send(estateSearchCondition);
 });
 
 app.post("/api/estate/req_doc/:id", async (req, res) => {
@@ -472,7 +474,7 @@ app.post("/api/estate/req_doc/:id", async (req, res) => {
       res.status(404).send("Not Found");
       return;
     }
-    res.json({ ok: true });
+    res.send({ ok: true });
   } catch (e) {
   } finally {
     await connection.release();
@@ -532,7 +534,7 @@ app.post("/api/estate/nazotte", async (req, res) => {
       i++;
     }
     results.count = results.estates.length;
-    res.json(results);
+    res.send(results);
   } catch (e) {
   } finally {
     await connection.release();
@@ -551,7 +553,7 @@ app.get("/api/estate/:id", async (req, res) => {
       return;
     }
 
-    res.json(camelcaseKeys(estate));
+    res.send(camelcaseKeys(estate));
   } catch (e) {
   } finally {
     await connection.release();
@@ -576,7 +578,7 @@ app.get("/api/recommended_estate/:id", async (req, res) => {
       [w, h, w, d, h, w, h, d, d, w, d, h, LIMIT]
     );
     const estates = es.map((estate) => camelcaseKeys(estate));
-    res.json({ estates });
+    res.send({ estates });
   } catch (e) {
   } finally {
     await connection.release();
@@ -607,7 +609,7 @@ app.post("/api/chair", async (req, res) => {
     cachedChairs = undefined;
     await commit();
     res.status(201);
-    res.json({ ok: true });
+    res.send({ ok: true });
   } catch (e) {
     await rollback();
   } finally {
@@ -639,7 +641,7 @@ app.post("/api/estate", async (req, res) => {
     cachedEstates = undefined;
     await commit();
     res.status(201);
-    res.json({ ok: true });
+    res.send({ ok: true });
   } catch (e) {
     await rollback();
   } finally {
