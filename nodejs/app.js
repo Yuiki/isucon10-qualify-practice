@@ -76,7 +76,13 @@ app.post("/initialize", async (req, res, next) => {
   }
 });
 
+let cachedEstates;
+
 app.get("/api/estate/low_priced", async (req, res, next) => {
+  if (cachedEstates) {
+    res.json({ estates: cachedEstates });
+    return;
+  }
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
@@ -85,8 +91,8 @@ app.get("/api/estate/low_priced", async (req, res, next) => {
       "SELECT * FROM estate ORDER BY rent ASC, id ASC LIMIT ?",
       [LIMIT]
     );
-    const estates = es.map((estate) => camelcaseKeys(estate));
-    res.json({ estates });
+    cachedEstates = es.map((estate) => camelcaseKeys(estate));
+    res.json({ estates: cachedEstates });
   } catch (e) {
     next(e);
   } finally {
@@ -310,6 +316,9 @@ app.post("/api/chair/buy/:id", async (req, res, next) => {
       res.status(404).send("Not Found");
       await rollback();
       return;
+    }
+    if (chair.stock <= 1) {
+      cachedEstates = undefined;
     }
     await query("UPDATE chair SET stock = ? WHERE id = ?", [
       chair.stock - 1,
@@ -641,6 +650,7 @@ app.post("/api/estate", upload.single("estates"), async (req, res, next) => {
         items
       );
     }
+    cachedEstates = undefined;
     await commit();
     res.status(201);
     res.json({ ok: true });
