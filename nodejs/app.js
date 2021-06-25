@@ -100,7 +100,13 @@ app.get("/api/estate/low_priced", async (req, res, next) => {
   }
 });
 
+let cachedChairs;
+
 app.get("/api/chair/low_priced", async (req, res, next) => {
+  if (cachedChairs) {
+    res.json({ chairs: cachedChairs });
+    return;
+  }
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
@@ -109,8 +115,8 @@ app.get("/api/chair/low_priced", async (req, res, next) => {
       "SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?",
       [LIMIT]
     );
-    const chairs = cs.map((chair) => camelcaseKeys(chair));
-    res.json({ chairs });
+    cachedChairs = cs.map((chair) => camelcaseKeys(chair));
+    res.json({ chairs: cachedChairs });
   } catch (e) {
     next(e);
   } finally {
@@ -318,7 +324,7 @@ app.post("/api/chair/buy/:id", async (req, res, next) => {
       return;
     }
     if (chair.stock <= 1) {
-      cachedEstates = undefined;
+      cachedChairs = undefined;
     }
     await query("UPDATE chair SET stock = ? WHERE id = ?", [
       chair.stock - 1,
@@ -620,6 +626,7 @@ app.post("/api/chair", upload.single("chairs"), async (req, res, next) => {
         items
       );
     }
+    cachedChairs = undefined;
     await commit();
     res.status(201);
     res.json({ ok: true });
