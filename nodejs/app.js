@@ -1,7 +1,6 @@
 "use strict";
 
-const express = require("express");
-const multer = require("multer");
+const fastify = require("fastify");
 const mysql = require("mysql");
 const path = require("path");
 const cp = require("child_process");
@@ -9,7 +8,6 @@ const util = require("util");
 const os = require("os");
 const parse = require("csv-parse/lib/sync");
 const camelcaseKeys = require("camelcase-keys");
-const upload = multer();
 const promisify = util.promisify;
 const exec = promisify(cp.exec);
 const chairSearchCondition = require("../fixture/chair_condition.json");
@@ -27,14 +25,14 @@ const dbinfo = {
   connectionLimit: 10,
 };
 
-const app = express();
+const app = fastify();
+
+app.register(require("fastify-multipart"));
+
 const db = mysql.createPool(dbinfo);
-app.set("db", db);
 
-app.use(express.json());
-
-app.use((req, res, next) => {
-  const ua = req.get("User-Agent");
+app.addHook("onRequest", (req, res, done) => {
+  const ua = req.headers["user-agent"];
   const bots = [
     /ISUCONbot(-Mobile)?/,
     /ISUCONbot-Image\//,
@@ -50,11 +48,11 @@ app.use((req, res, next) => {
   if (bots.some((bot) => ua.match(bot))) {
     res.status(503).send();
   } else {
-    next();
+    done();
   }
 });
 
-app.post("/initialize", async (req, res, next) => {
+app.post("/initialize", async (req, res) => {
   cachedEstates = undefined;
   cachedChairs = undefined;
   try {
@@ -73,14 +71,12 @@ app.post("/initialize", async (req, res, next) => {
     res.json({
       language: "nodejs",
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) {}
 });
 
 let cachedEstates;
 
-app.get("/api/estate/low_priced", async (req, res, next) => {
+app.get("/api/estate/low_priced", async (req, res) => {
   if (cachedEstates) {
     res.json({ estates: cachedEstates });
     return;
@@ -96,7 +92,6 @@ app.get("/api/estate/low_priced", async (req, res, next) => {
     cachedEstates = es.map((estate) => camelcaseKeys(estate));
     res.json({ estates: cachedEstates });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
@@ -104,7 +99,7 @@ app.get("/api/estate/low_priced", async (req, res, next) => {
 
 let cachedChairs;
 
-app.get("/api/chair/low_priced", async (req, res, next) => {
+app.get("/api/chair/low_priced", async (req, res) => {
   if (cachedChairs) {
     res.json({ chairs: cachedChairs });
     return;
@@ -120,13 +115,12 @@ app.get("/api/chair/low_priced", async (req, res, next) => {
     cachedChairs = cs.map((chair) => camelcaseKeys(chair));
     res.json({ chairs: cachedChairs });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/chair/search", async (req, res, next) => {
+app.get("/api/chair/search", async (req, res) => {
   const searchQueries = [];
   const queryParams = [];
   const {
@@ -275,17 +269,16 @@ app.get("/api/chair/search", async (req, res, next) => {
       chairs: camelcaseKeys(chairs),
     });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/chair/search/condition", (req, res, next) => {
+app.get("/api/chair/search/condition", (req, res) => {
   res.json(chairSearchCondition);
 });
 
-app.get("/api/chair/:id", async (req, res, next) => {
+app.get("/api/chair/:id", async (req, res) => {
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
@@ -298,13 +291,12 @@ app.get("/api/chair/:id", async (req, res, next) => {
     }
     res.json(camelcaseKeys(chair));
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.post("/api/chair/buy/:id", async (req, res, next) => {
+app.post("/api/chair/buy/:id", async (req, res) => {
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const beginTransaction = promisify(
@@ -336,13 +328,12 @@ app.post("/api/chair/buy/:id", async (req, res, next) => {
     res.json({ ok: true });
   } catch (e) {
     await rollback();
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/estate/search", async (req, res, next) => {
+app.get("/api/estate/search", async (req, res) => {
   const searchQueries = [];
   const queryParams = [];
   const {
@@ -460,17 +451,16 @@ app.get("/api/estate/search", async (req, res, next) => {
       estates: camelcaseKeys(estates),
     });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/estate/search/condition", (req, res, next) => {
+app.get("/api/estate/search/condition", (req, res) => {
   res.json(estateSearchCondition);
 });
 
-app.post("/api/estate/req_doc/:id", async (req, res, next) => {
+app.post("/api/estate/req_doc/:id", async (req, res) => {
   const id = req.params.id;
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
@@ -484,13 +474,12 @@ app.post("/api/estate/req_doc/:id", async (req, res, next) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.post("/api/estate/nazotte", async (req, res, next) => {
+app.post("/api/estate/nazotte", async (req, res) => {
   const coordinates = req.body.coordinates;
   const longitudes = coordinates.map((c) => c.longitude);
   const latitudes = coordinates.map((c) => c.latitude);
@@ -545,13 +534,12 @@ app.post("/api/estate/nazotte", async (req, res, next) => {
     results.count = results.estates.length;
     res.json(results);
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/estate/:id", async (req, res, next) => {
+app.get("/api/estate/:id", async (req, res) => {
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
@@ -565,13 +553,12 @@ app.get("/api/estate/:id", async (req, res, next) => {
 
     res.json(camelcaseKeys(estate));
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.get("/api/recommended_estate/:id", async (req, res, next) => {
+app.get("/api/recommended_estate/:id", async (req, res) => {
   const id = req.params.id;
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
@@ -591,13 +578,12 @@ app.get("/api/recommended_estate/:id", async (req, res, next) => {
     const estates = es.map((estate) => camelcaseKeys(estate));
     res.json({ estates });
   } catch (e) {
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.post("/api/chair", upload.single("chairs"), async (req, res, next) => {
+app.post("/api/chair", async (req, res) => {
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const beginTransaction = promisify(
@@ -608,7 +594,9 @@ app.post("/api/chair", upload.single("chairs"), async (req, res, next) => {
   const rollback = promisify(connection.rollback.bind(connection));
   try {
     await beginTransaction();
-    const csv = parse(req.file.buffer, { skip_empty_line: true });
+    const data = await req.file();
+    const buf = await data.toBuffer();
+    const csv = parse(buf, { skip_empty_line: true });
     for (var i = 0; i < csv.length; i++) {
       const items = csv[i];
       await query(
@@ -622,13 +610,12 @@ app.post("/api/chair", upload.single("chairs"), async (req, res, next) => {
     res.json({ ok: true });
   } catch (e) {
     await rollback();
-    next(e);
   } finally {
     await connection.release();
   }
 });
 
-app.post("/api/estate", upload.single("estates"), async (req, res, next) => {
+app.post("/api/estate", async (req, res) => {
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const beginTransaction = promisify(
@@ -639,7 +626,9 @@ app.post("/api/estate", upload.single("estates"), async (req, res, next) => {
   const rollback = promisify(connection.rollback.bind(connection));
   try {
     await beginTransaction();
-    const csv = parse(req.file.buffer, { skip_empty_line: true });
+    const data = await req.file();
+    const buf = await data.toBuffer();
+    const csv = parse(buf, { skip_empty_line: true });
     for (var i = 0; i < csv.length; i++) {
       const items = csv[i];
       await query(
@@ -653,7 +642,6 @@ app.post("/api/estate", upload.single("estates"), async (req, res, next) => {
     res.json({ ok: true });
   } catch (e) {
     await rollback();
-    next(e);
   } finally {
     await connection.release();
   }
