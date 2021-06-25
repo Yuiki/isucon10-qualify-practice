@@ -217,7 +217,8 @@ app.get("/api/chair/search", async (req, res, next) => {
   const pageNum = parseInt(page, 10);
   const perPageNum = parseInt(perPage, 10);
 
-  const sqlprefix = "SELECT * FROM chair WHERE ";
+  const sqlprefix =
+    "SELECT `id`, `name`, `description`, `thumbnail`, `price`, `height`, `width`, `depth`, `color`, `features`, `kind`, `popularity`, `stock` FROM chair WHERE ";
   const searchCondition = searchQueries.join(" AND ");
   const limitOffset = " ORDER BY r_popularity ASC, id ASC LIMIT ? OFFSET ?";
   const countprefix = "SELECT COUNT(*) as count FROM chair WHERE ";
@@ -398,7 +399,8 @@ app.get("/api/estate/search", async (req, res, next) => {
   const pageNum = parseInt(page, 10);
   const perPageNum = parseInt(perPage, 10);
 
-  const sqlprefix = "SELECT * FROM estate WHERE ";
+  const sqlprefix =
+    "SELECT `id`, `name`, `description`, `thumbnail`, `address`, `latitude`, `longitude`, `rent`, `door_height`, `door_width`, `features`, `popularity` FROM estate WHERE ";
   const searchCondition = searchQueries.join(" AND ");
   const limitOffset = " ORDER BY r_popularity ASC, id ASC LIMIT ? OFFSET ?";
   const countprefix = "SELECT COUNT(*) as count FROM estate WHERE ";
@@ -471,7 +473,7 @@ app.post("/api/estate/nazotte", async (req, res, next) => {
   const query = promisify(connection.query.bind(connection));
   try {
     const estates = await query(
-      "SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY r_popularity ASC, id ASC",
+      "SELECT `id`, `name`, `description`, `thumbnail`, `address`, `latitude`, `longitude`, `rent`, `door_height`, `door_width`, `features`, `popularity` FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY r_popularity ASC, id ASC",
       [
         boundingbox.bottomright.latitude,
         boundingbox.topleft.latitude,
@@ -550,7 +552,10 @@ app.get("/api/recommended_estate/:id", async (req, res, next) => {
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
-    const [chair] = await query("SELECT * FROM chair WHERE id = ?", [id]);
+    const [chair] = await query(
+      "SELECT `id`, `name`, `description`, `thumbnail`, `price`, `height`, `width`, `depth`, `color`, `features`, `kind`, `popularity`, `stock` FROM chair WHERE id = ?",
+      [id]
+    );
     const w = chair.width;
     const h = chair.height;
     const d = chair.depth;
