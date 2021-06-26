@@ -675,9 +675,9 @@ app.post("/api/estate", async (req, res) => {
     const data = await req.file();
     const buf = await data.toBuffer();
     const csv = parse(buf, { skip_empty_line: true });
-    const values = csv.map((items) => `(${items.join()})`).join();
     await query(
-      `INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES ${values}`
+      "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES ?",
+      csv
     );
     cachedLowPricedEstates = undefined;
     cachedSearchEstates.clear();
@@ -686,6 +686,7 @@ app.post("/api/estate", async (req, res) => {
     res.status(201);
     res.send({ ok: true });
   } catch (e) {
+    console.log(e);
     await rollback();
   } finally {
     await connection.release();
