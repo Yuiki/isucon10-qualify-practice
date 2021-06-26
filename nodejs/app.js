@@ -490,8 +490,16 @@ app.get("/api/estate/search/condition", (req, res) => {
   res.send(estateSearchCondition);
 });
 
+const cachedEstates = new Map();
+
 app.post("/api/estate/req_doc/:id", async (req, res) => {
   const id = req.params.id;
+  const cached = cachedEstates.get(id);
+  if (cached) {
+    res.send({ ok: true });
+    return;
+  }
+
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
@@ -568,8 +576,6 @@ app.post("/api/estate/nazotte", async (req, res) => {
     await connection.release();
   }
 });
-
-const cachedEstates = new Map();
 
 app.get("/api/estate/:id", async (req, res) => {
   const id = req.params.id;
