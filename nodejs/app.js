@@ -350,6 +350,8 @@ app.post("/api/chair/buy/:id", async (req, res) => {
   }
 });
 
+const cachedSearchEstates = new Map();
+
 app.get("/api/estate/search", async (req, res) => {
   const searchQueries = [];
   const queryParams = [];
@@ -361,6 +363,15 @@ app.get("/api/estate/search", async (req, res) => {
     page,
     perPage,
   } = req.query;
+
+  const key = `${doorHeightRangeId ?? ""},${doorWidthRangeId ?? ""},${
+    rentRangeId ?? ""
+  },${features ?? ""},${page ?? ""},${perPage ?? ""}`;
+  const cached = cachedSearchEstates.get(key);
+  if (cached) {
+    res.send(cached);
+    return;
+  }
 
   if (!!doorHeightRangeId) {
     const doorHeight =
@@ -463,10 +474,12 @@ app.get("/api/estate/search", async (req, res) => {
       `${sqlprefix}${searchCondition}${limitOffset}`,
       queryParams
     );
-    res.send({
+    const value = {
       count,
       estates: camelcaseKeys(estates),
-    });
+    };
+    cachedSearchEstates.set(key, value);
+    res.send(value);
   } catch (e) {
   } finally {
     await connection.release();
@@ -654,6 +667,7 @@ app.post("/api/estate", async (req, res) => {
       );
     }
     cachedEstates = undefined;
+    cachedSearchEstates.clear();
     await commit();
     res.status(201);
     res.send({ ok: true });
