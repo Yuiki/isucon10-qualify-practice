@@ -677,7 +677,7 @@ app.post("/api/estate", async (req, res) => {
     const csv = parse(buf, { skip_empty_line: true });
     await query(
       "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES ?",
-      csv
+      [csv]
     );
     cachedLowPricedEstates = undefined;
     cachedSearchEstates.clear();
