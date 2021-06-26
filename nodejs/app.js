@@ -369,7 +369,6 @@ app.get("/api/estate/search", async (req, res) => {
   },${features ?? ""},${page ?? ""},${perPage ?? ""}`;
   const cached = cachedSearchEstates.get(key);
   if (cached) {
-    console.log(`HIT: ${key}`);
     res.send(cached);
     return;
   }
