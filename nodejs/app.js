@@ -675,13 +675,10 @@ app.post("/api/estate", async (req, res) => {
     const data = await req.file();
     const buf = await data.toBuffer();
     const csv = parse(buf, { skip_empty_line: true });
-    for (var i = 0; i < csv.length; i++) {
-      const items = csv[i];
-      await query(
-        "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-        items
-      );
-    }
+    const values = csv.map((items) => `(${items.join()})`).join();
+    await query(
+      `INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES ${values}`
+    );
     cachedLowPricedEstates = undefined;
     cachedSearchEstates.clear();
     cachedEstates.clear();
