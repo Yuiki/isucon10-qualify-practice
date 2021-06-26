@@ -68,8 +68,8 @@ app.addContentTypeParser("empty", function (req, done) {
 });
 
 app.post("/initialize", async (req, res) => {
-  cachedEstates = undefined;
-  cachedChairs = undefined;
+  cachedLowPricedEstates = undefined;
+  cachedLowPricedChairs = undefined;
   try {
     const dbdir = path.resolve("..", "mysql", "db");
     const dbfiles = [
@@ -91,11 +91,11 @@ app.post("/initialize", async (req, res) => {
   }
 });
 
-let cachedEstates;
+let cachedLowPricedEstates;
 
 app.get("/api/estate/low_priced", async (req, res) => {
-  if (cachedEstates) {
-    res.send({ estates: cachedEstates });
+  if (cachedLowPricedEstates) {
+    res.send({ estates: cachedLowPricedEstates });
     return;
   }
   const getConnection = promisify(db.getConnection.bind(db));
@@ -106,19 +106,19 @@ app.get("/api/estate/low_priced", async (req, res) => {
       "SELECT * FROM estate ORDER BY rent ASC, id ASC LIMIT ?",
       [LIMIT]
     );
-    cachedEstates = es.map((estate) => camelcaseKeys(estate));
-    res.send({ estates: cachedEstates });
+    cachedLowPricedEstates = es.map((estate) => camelcaseKeys(estate));
+    res.send({ estates: cachedLowPricedEstates });
   } catch (e) {
   } finally {
     await connection.release();
   }
 });
 
-let cachedChairs;
+let cachedLowPricedChairs;
 
 app.get("/api/chair/low_priced", async (req, res) => {
-  if (cachedChairs) {
-    res.send({ chairs: cachedChairs });
+  if (cachedLowPricedChairs) {
+    res.send({ chairs: cachedLowPricedChairs });
     return;
   }
   const getConnection = promisify(db.getConnection.bind(db));
@@ -129,8 +129,8 @@ app.get("/api/chair/low_priced", async (req, res) => {
       "SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?",
       [LIMIT]
     );
-    cachedChairs = cs.map((chair) => camelcaseKeys(chair));
-    res.send({ chairs: cachedChairs });
+    cachedLowPricedChairs = cs.map((chair) => camelcaseKeys(chair));
+    res.send({ chairs: cachedLowPricedChairs });
   } catch (e) {
   } finally {
     await connection.release();
@@ -335,7 +335,7 @@ app.post("/api/chair/buy/:id", async (req, res) => {
       return;
     }
     if (chair.stock <= 1) {
-      cachedChairs = undefined;
+      cachedLowPricedChairs = undefined;
     }
     await query("UPDATE chair SET stock = ? WHERE id = ?", [
       chair.stock - 1,
@@ -569,19 +569,29 @@ app.post("/api/estate/nazotte", async (req, res) => {
   }
 });
 
+const cachedEstates = new Map();
+
 app.get("/api/estate/:id", async (req, res) => {
+  const id = req.params.id;
+  const cached = cachedEstates.get(id);
+  if (cached) {
+    res.send(cached);
+    return;
+  }
+
   const getConnection = promisify(db.getConnection.bind(db));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
-    const id = req.params.id;
     const [estate] = await query("SELECT * FROM estate WHERE id = ?", [id]);
     if (estate == null) {
       res.status(404).send("Not Found");
       return;
     }
 
-    res.send(camelcaseKeys(estate));
+    const value = camelcaseKeys(estate);
+    cachedEstates.set(id, value);
+    res.send(value);
   } catch (e) {
   } finally {
     await connection.release();
@@ -634,7 +644,7 @@ app.post("/api/chair", async (req, res) => {
         items
       );
     }
-    cachedChairs = undefined;
+    cachedLowPricedChairs = undefined;
     await commit();
     res.status(201);
     res.send({ ok: true });
@@ -666,8 +676,9 @@ app.post("/api/estate", async (req, res) => {
         items
       );
     }
-    cachedEstates = undefined;
+    cachedLowPricedEstates = undefined;
     cachedSearchEstates.clear();
+    cachedEstates.clear();
     await commit();
     res.status(201);
     res.send({ ok: true });
