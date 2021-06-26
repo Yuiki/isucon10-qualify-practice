@@ -25,7 +25,7 @@ const dbinfo = {
   connectionLimit: 10,
 };
 
-const app = fastify({ logger: { level: "debug" } });
+const app = fastify();
 
 app.register(require("fastify-multipart"));
 
@@ -369,6 +369,7 @@ app.get("/api/estate/search", async (req, res) => {
   },${features ?? ""},${page ?? ""},${perPage ?? ""}`;
   const cached = cachedSearchEstates.get(key);
   if (cached) {
+    console.log(`HIT: ${key}`);
     res.send(cached);
     return;
   }
