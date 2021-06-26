@@ -643,13 +643,10 @@ app.post("/api/chair", async (req, res) => {
     const data = await req.file();
     const buf = await data.toBuffer();
     const csv = parse(buf, { skip_empty_line: true });
-    for (var i = 0; i < csv.length; i++) {
-      const items = csv[i];
-      await query(
-        "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        items
-      );
-    }
+    await query(
+      "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES ?",
+      [csv]
+    );
     cachedLowPricedChairs = undefined;
     await commit();
     res.status(201);
