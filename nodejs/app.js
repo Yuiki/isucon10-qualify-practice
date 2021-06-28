@@ -138,7 +138,7 @@ app.get("/api/chair/low_priced", async (req, res) => {
     res.send({ chairs: cachedLowPricedChairs });
     return;
   }
-  const getConnection = promisify(chairDb.getConnection.bind(estateDb));
+  const getConnection = promisify(chairDb.getConnection.bind(chairDb));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
@@ -285,7 +285,7 @@ app.get("/api/chair/search", async (req, res) => {
   const limitOffset = " ORDER BY r_popularity ASC, id ASC LIMIT ? OFFSET ?";
   const countprefix = "SELECT COUNT(*) as count FROM chair WHERE ";
 
-  const getConnection = promisify(chairDb.getConnection.bind(estateDb));
+  const getConnection = promisify(chairDb.getConnection.bind(cheirDb));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
@@ -313,7 +313,7 @@ app.get("/api/chair/search/condition", (req, res) => {
 });
 
 app.get("/api/chair/:id", async (req, res) => {
-  const getConnection = promisify(chairDb.getConnection.bind(estateDb));
+  const getConnection = promisify(chairDb.getConnection.bind(chairDb));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
@@ -331,7 +331,7 @@ app.get("/api/chair/:id", async (req, res) => {
 });
 
 app.post("/api/chair/buy/:id", async (req, res) => {
-  const getConnection = promisify(chairDb.getConnection.bind(estateDb));
+  const getConnection = promisify(chairDb.getConnection.bind(chairDb));
   const connection = await getConnection();
   const beginTransaction = promisify(
     connection.beginTransaction.bind(connection)
@@ -654,7 +654,7 @@ app.get("/api/recommended_estate/:id", async (req, res) => {
 });
 
 app.post("/api/chair", async (req, res) => {
-  const getConnection = promisify(chairDb.getConnection.bind(estateDb));
+  const getConnection = promisify(chairDb.getConnection.bind(chairDb));
   const connection = await getConnection();
   const beginTransaction = promisify(
     connection.beginTransaction.bind(connection)
