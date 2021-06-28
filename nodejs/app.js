@@ -285,7 +285,7 @@ app.get("/api/chair/search", async (req, res) => {
   const limitOffset = " ORDER BY r_popularity ASC, id ASC LIMIT ? OFFSET ?";
   const countprefix = "SELECT COUNT(*) as count FROM chair WHERE ";
 
-  const getConnection = promisify(chairDb.getConnection.bind(cheirDb));
+  const getConnection = promisify(chairDb.getConnection.bind(chairDb));
   const connection = await getConnection();
   const query = promisify(connection.query.bind(connection));
   try {
